@@ -42,7 +42,7 @@ def run_benchmark(grid_size, num_games=BENCHMARK_NUM_GAMES):
             elapsed = time.time() - start_time
             results[mode_name]['times'].append(elapsed)
 
-            if game.won:
+            if game.food_eaten > 0:
                 results[mode_name]['wins'] += 1
                 results[mode_name]['steps_win'].append(steps)
             else:

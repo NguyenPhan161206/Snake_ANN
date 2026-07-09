@@ -119,9 +119,12 @@ class SnakeGUI:
             mode_label = f"Mode: [1]Manhattan (current) | [2]ANN"
 
         obstacles_count = len(self.game.obstacles)
+        state_text = 'Playing'
+        if self.game.done:
+            state_text = 'Dead' if self.game.food_eaten > 0 else 'Dead (0 food)'
         texts = [
             mode_label,
-            f"Steps: {self.game.steps}  |  Obstacles: {obstacles_count}  |  State: {'WIN' if self.game.won else 'DONE' if self.game.done else 'Playing'}",
+            f"Steps: {self.game.steps}  |  Food: {self.game.food_eaten}  |  Obstacles: {obstacles_count}  |  State: {state_text}",
             f"ANN h={h_val:.1f}  |  Manhattan h={h_man:.1f}",
             "[R]eset  [Space]Pause  [Q]uit"
         ]

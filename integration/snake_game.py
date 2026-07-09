@@ -21,6 +21,7 @@ class SnakeGame:
         self.done = False
         self.steps = 0
         self.won = False
+        self.food_eaten = 0
         self._generate_obstacles()
         self._place_snake()
         self._place_food()
@@ -56,12 +57,29 @@ class SnakeGame:
 
     def _place_food(self):
         occupied = set(self.snake) | self.obstacles
-        empty = [(r, c) for r in range(self.grid_size) for c in range(self.grid_size)
-                 if (r, c) not in occupied]
-        if empty:
-            self.food = empty[np.random.randint(len(empty))]
+        candidates = self._reachable_cells(occupied)
+        if candidates:
+            self.food = candidates[np.random.randint(len(candidates))]
         else:
             self.food = None
+
+    def _reachable_cells(self, occupied):
+        if not self.snake:
+            return []
+        from collections import deque
+        start = self.snake[0]
+        visited = {start}
+        queue = deque([start])
+        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+        while queue:
+            r, c = queue.popleft()
+            for dr, dc in directions:
+                nr, nc = r + dr, c + dc
+                if (0 <= nr < self.grid_size and 0 <= nc < self.grid_size
+                        and (nr, nc) not in visited and (nr, nc) not in occupied):
+                    visited.add((nr, nc))
+                    queue.append((nr, nc))
+        return [c for c in visited if c != start]
 
     def step(self, direction):
         if self.done:
@@ -87,8 +105,9 @@ class SnakeGame:
 
         self.snake.insert(0, new_head)
         if new_head == self.food:
+            self.food_eaten += 1
             self.won = True
-            self.done = True
+            self._place_food()
         else:
             self.snake.pop()
         self.steps += 1
