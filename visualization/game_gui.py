@@ -12,6 +12,7 @@ from integration.astar_solver import AStarSolver
 COLORS = {
     'bg': (30, 30, 30),
     'grid': (50, 50, 50),
+    'obstacle': (70, 60, 50),
     'snake_head': (0, 200, 0),
     'snake_body': (0, 150, 0),
     'food': (255, 50, 50),
@@ -92,6 +93,8 @@ class SnakeGUI:
             for c in range(self.grid_size):
                 rect = (c * self.cell_size, r * self.cell_size,
                         self.cell_size, self.cell_size)
+                if (r, c) in self.game.obstacles:
+                    pygame.draw.rect(self.screen, COLORS['obstacle'], rect)
                 pygame.draw.rect(self.screen, COLORS['grid'], rect, 1)
 
         for i, (r, c) in enumerate(self.game.snake):
@@ -115,9 +118,10 @@ class SnakeGUI:
         else:
             mode_label = f"Mode: [1]Manhattan (current) | [2]ANN"
 
+        obstacles_count = len(self.game.obstacles)
         texts = [
             mode_label,
-            f"Steps: {self.game.steps}  |  State: {'WIN' if self.game.won else 'DONE' if self.game.done else 'Playing'}",
+            f"Steps: {self.game.steps}  |  Obstacles: {obstacles_count}  |  State: {'WIN' if self.game.won else 'DONE' if self.game.done else 'Playing'}",
             f"ANN h={h_val:.1f}  |  Manhattan h={h_man:.1f}",
             "[R]eset  [Space]Pause  [Q]uit"
         ]

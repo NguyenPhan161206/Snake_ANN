@@ -3,47 +3,65 @@ import sys
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from config import SNAKE_INITIAL_LENGTH
+from config import SNAKE_INITIAL_LENGTH, SNAKE_START, OBSTACLE_DENSITY
 
 
 class SnakeGame:
     def __init__(self, grid_size, snake_length=SNAKE_INITIAL_LENGTH):
         self.grid_size = grid_size
         self.snake_length = snake_length
+        self.snake_start = SNAKE_START
+        self.obstacle_density = OBSTACLE_DENSITY
         self.reset()
 
     def reset(self):
         self.snake = []
         self.food = None
+        self.obstacles = set()
         self.done = False
         self.steps = 0
         self.won = False
-        self._place_random()
+        self._generate_obstacles()
+        self._place_snake()
+        self._place_food()
         return self
 
-    def _place_random(self):
-        grid = np.zeros((self.grid_size, self.grid_size), dtype=int)
-        head_r = np.random.randint(0, self.grid_size)
-        head_c = np.random.randint(0, self.grid_size)
+    def _generate_obstacles(self):
+        self.obstacles = set()
+        margin = 2
+        for r in range(self.grid_size):
+            for c in range(self.grid_size):
+                if r <= margin and c <= margin:
+                    continue
+                if np.random.random() < self.obstacle_density:
+                    self.obstacles.add((r, c))
+
+    def _place_snake(self):
+        head_r, head_c = self.snake_start
         self.snake = [(head_r, head_c)]
-        grid[head_r, head_c] = 1
+        body = [(head_r, head_c)]
         for _ in range(self.snake_length - 1):
-            last = self.snake[-1]
+            last = body[-1]
             neighbors = []
             for dr, dc in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
                 nr, nc = last[0] + dr, last[1] + dc
-                if 0 <= nr < self.grid_size and 0 <= nc < self.grid_size and grid[nr, nc] == 0:
+                if (0 <= nr < self.grid_size and 0 <= nc < self.grid_size
+                        and (nr, nc) not in body and (nr, nc) not in self.obstacles):
                     neighbors.append((nr, nc))
             if not neighbors:
                 break
             chosen = neighbors[np.random.randint(len(neighbors))]
-            self.snake.append(chosen)
-            grid[chosen[0], chosen[1]] = 1
+            body.append(chosen)
+        self.snake = body
+
+    def _place_food(self):
+        occupied = set(self.snake) | self.obstacles
         empty = [(r, c) for r in range(self.grid_size) for c in range(self.grid_size)
-                 if grid[r, c] == 0]
+                 if (r, c) not in occupied]
         if empty:
             self.food = empty[np.random.randint(len(empty))]
-        return self.snake, self.food
+        else:
+            self.food = None
 
     def step(self, direction):
         if self.done:
@@ -53,6 +71,11 @@ class SnakeGame:
         new_head = (head[0] + dr, head[1] + dc)
 
         if not (0 <= new_head[0] < self.grid_size and 0 <= new_head[1] < self.grid_size):
+            self.done = True
+            self.won = False
+            return
+
+        if new_head in self.obstacles:
             self.done = True
             self.won = False
             return
@@ -74,7 +97,7 @@ class SnakeGame:
         if self.done:
             return
         head = self.snake[0]
-        path = solver.find_path(head, self.food, self.snake)
+        path = solver.find_path(head, self.food, self.snake, self.obstacles)
         if path is not None and len(path) > 1:
             next_pos = path[1]
             direction = (next_pos[0] - head[0], next_pos[1] - head[1])

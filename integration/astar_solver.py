@@ -12,13 +12,13 @@ class AStarSolver:
         self.directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
 
     def precompute(self, head, food, body):
-        body_set = set(body)
         if hasattr(self.heuristic, 'precompute'):
             self.heuristic.precompute(head, food, body)
 
-    def find_path(self, head, food, body):
+    def find_path(self, head, food, body, obstacles=None):
         self.precompute(head, food, body)
         body_set = set(body)
+        blocked = body_set | (obstacles or set())
         start = head
         goal = food
 
@@ -51,7 +51,7 @@ class AStarSolver:
 
                 if not (0 <= nr < self.grid_size and 0 <= nc < self.grid_size):
                     continue
-                if neighbor in body_set or neighbor in closed_set:
+                if neighbor in blocked or neighbor in closed_set:
                     continue
 
                 tentative_g = g_score[current] + 1
