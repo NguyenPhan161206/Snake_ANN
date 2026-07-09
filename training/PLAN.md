@@ -1,4 +1,4 @@
-# Kế hoạch chi tiết: 02_training
+# Kế hoạch chi tiết: training
 
 ## Mục tiêu
 
@@ -27,9 +27,7 @@ Dense(1, Linear)   ← Output: khoảng cách dự đoán
 - Optimizer: Adam (lr=0.001)
 - Metric: Mean Absolute Error (MAE)
 
-## Các file
-
-### 1. build_model.py — Định nghĩa kiến trúc
+## File: build_model.py
 
 ```
 build_model.py
@@ -42,81 +40,59 @@ build_model.py
 │     Dense(32, activation='relu'),
 │     Dense(1, activation='linear')
 │   ])
-│   model.compile(optimizer=Adam(learning_rate=0.001),
-│                 loss='mse',
-│                 metrics=['mae'])
+│   model.compile(optimizer=Adam(lr=0.001), loss='mse', metrics=['mae'])
 │   return model
-│
-├── if __name__ == "__main__":
-│     model = build_ann()
-│     model.summary()  # in kiến trúc
 ```
 
-### 2. train.py — Huấn luyện
+## File: train.py
 
 ```
 train.py
 ├── train_model(grid_size):
-│   X = np.load(f"data/raw/{grid_size}x{grid_size}/X.npy")
-│   y = np.load(f"data/raw/{grid_size}x{grid_size}/y.npy")
-│   X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2)
+│   X_train = np.load("data/raw/{size}/X_train.npy")
+│   y_train = np.load("data/raw/{size}/y_train.npy")
+│   X_val   = np.load("data/raw/{size}/X_val.npy")
+│   y_val   = np.load("data/raw/{size}/y_val.npy")
 │
-│   model = build_ann(INPUT_FEATURES)
+│   model = build_ann()
 │   callbacks = [
-│     EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True),
-│     ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5)
+│     EarlyStopping(patience=10, restore_best_weights=True),
+│     ReduceLROnPlateau(factor=0.5, patience=5)
 │   ]
+│   model.fit(X_train, y_train,
+│             validation_data=(X_val, y_val),
+│             epochs=100, batch_size=32, callbacks=callbacks)
+│   model.save(f"models/{size}x{size}/model.keras")
+│   lưu history.hist → results/plots/history_{size}.pkl
 │
-│   history = model.fit(X_train, y_train,
-│                       validation_data=(X_val, y_val),
-│                       epochs=100, batch_size=32,
-│                       callbacks=callbacks,
-│                       verbose=1)
-│   model.save(f"models/{grid_size}x{grid_size}/model.keras")
-│   return history
-│
-├── if __name__ == "__main__":
-│   for size in AVAILABLE_GRID_SIZES:
-│     train_model(size)
+└── run(grid_size): gọi train_model
 ```
 
-### 3. plot_training.py — Vẽ đồ thị Loss
+## File: plot_training.py
 
 ```
 plot_training.py
-├── đọc history từ train_model (hoặc lưu history riêng)
+├── load history_{size}.pkl
 ├── vẽ 2 đồ thị:
 │   └── Loss (train vs validation) theo epoch
 │   └── MAE (train vs validation) theo epoch
-├── đánh dấu điểm overfitting nếu val_loss bắt đầu tăng
-├── lưu vào results/plots/loss_{size}x{size}.png
+└── lưu vào results/plots/loss_{size}.png
 ```
 
-### 4. evaluate_model.py — Đánh giá
+## File: evaluate_model.py
 
 ```
 evaluate_model.py
-├── load model + test set (20% chưa dùng)
-├── predict trên test set
-├── in:
-│   Test MSE: ...
-│   Test MAE: ...
-│   R2 Score: ...
-├── vẽ biểu đồ scatter (y_true vs y_pred)
-│   lưu vào results/plots/scatter_{size}.png
+├── load model.keras + X_val, y_val
+├── model.evaluate() → in Test MSE, Test MAE
+├── r2_score_manual() → in R2 Score
+├── vẽ scatter (y_true vs y_pred) + đường perfect fit
+└── lưu vào results/plots/scatter_{size}.png
 ```
-
-## Đầu vào/Đầu ra
-
-- **Input**: `data/raw/{size}/X.npy`, `data/raw/{size}/y.npy`
-- **Output**:
-  - `models/{size}/model.keras`
-  - `results/plots/loss_{size}.png`
-  - `results/plots/scatter_{size}.png`
-  - Console: Test MSE, MAE, R2
 
 ## Kiểm soát overfitting
 
 - EarlyStopping(patience=10): dừng khi val_loss không cải thiện 10 epoch
 - ReduceLROnPlateau: giảm lr khi loss plateau
-- Theo dõi đồ thị: val_loss ↑ liên tục = overfitting → cần tăng dropout hoặc giảm model size
+- Đồ thị: val_loss ↑ liên tục = overfitting → cần tăng dropout hoặc giảm model size
+- 10x10: R² ≈ 0.95 (ổn), 20x20: R² ≈ 0.96 (overfit nhẹ, best ở epoch 1)

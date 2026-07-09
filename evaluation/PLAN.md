@@ -1,102 +1,76 @@
-# Kế hoạch chi tiết: 05_evaluation
+# Kế hoạch chi tiết: evaluation
 
 ## Mục tiêu
 
-Chạy benchmark tự động để so sánh hiệu năng giữa A*+Manhattan và A*+ANN
-trên nhiều game, thu thập số liệu thống kê và xuất báo cáo.
+Chạy benchmark tự động so sánh A*+Manhattan vs A*+ANN trên nhiều game,
+thu thập số liệu thống kê và xuất báo cáo.
 
 ## Các chỉ số đo lường
 
 | Chỉ số | Ý nghĩa |
 |--------|----------|
-| Win Rate | % số game rắn ăn được thức ăn trước khi chết |
-| Avg Steps (Win) | Số bước trung bình khi rắn thắng |
-| Avg Steps (Lose) | Số bước trung bình khi rắn thua |
-| Max Steps | Số bước tối đa trong 1 game |
+| Win Rate | % game rắn ăn được ≥1 mồi trước khi chết |
+| Avg Steps (Win) | Số bước trung bình khi rắn có ăn được mồi |
+| Avg Steps (Lose) | Số bước trung bình khi rắn chết mà không ăn được mồi nào |
 | Avg Time/Step | Thời gian trung bình mỗi bước (ms) |
-| Total Time | Tổng thời gian chạy benchmark |
 
-## Các file
-
-### 1. benchmark.py — Chạy benchmark
+## File: benchmark.py
 
 ```
 benchmark.py
-├── run_benchmark(grid_size, num_games=50):
+├── run_benchmark(grid_size, num_games):
 │   results = {
-│       "manhattan": {"wins":0, "steps_win":[], "steps_lose":[], "times":[]},
-│       "ann":       {"wins":0, "steps_win":[], "steps_lose":[], "times":[]}
+│     "manhattan": { wins, steps_win[], steps_lose[], times[] },
+│     "ann":       { wins, steps_win[], steps_lose[], times[] }
 │   }
 │
-│   for mode, solver in [("manhattan", ManhattanSolver),
-│                        ("ann", AnnSolver)]:
-│       for game_id in range(num_games):
-│           game = SnakeGame(grid_size)
-│           start_time = time.time()
-│           steps = 0
-│           won = False
+│   for (mode, solver) in [("manhattan", solver_man), ("ann", solver_ann)]:
+│     for game_id in range(num_games):
+│       game = SnakeGame(grid_size)  # tự sinh obstacles + fixed start
+│       while not game.done và steps < MAX_STEPS:
+│         game.play_with_solver(solver)
+│         steps += 1
 │
-│           while not game.done and steps < MAX_STEPS:
-│               path = solver.find_path(game.snake[0], game.food, game.snake)
-│               if path and len(path) > 1:
-│                   next_pos = path[1]
-│                   direction = (next_pos[0]-head[0], next_pos[1]-head[1])
-│                   game.step(direction)
-│                   steps += 1
-│                   if game.snake[0] == game.food:
-│                       won = True
-│                       break
-│               else:
-│                   game.done = True
+│       if game.food_eaten > 0: → wins++, steps_win
+│       else: → steps_lose
 │
-│           elapsed = time.time() - start_time
-│           lưu vào results[mode]
+├── analyze(results):
+│   win_rate = wins / num_games * 100
+│   avg_steps_win = mean(steps_win)
+│   avg_steps_lose = mean(steps_lose)
+│   avg_time_per_step = mean(times) / mean(steps)
 │
-│   return results
+├── print_table(): in bảng so sánh ra console
 │
-├── if __name__ == "__main__":
-│   for size in AVAILABLE_GRID_SIZES:
-│       results = run_benchmark(size, BENCHMARK_NUM_GAMES)
-│       np.save(f"results/logs/benchmark_{size}.npy", results)
+└── run(grid_size):
+│   chạy benchmark → analyze → print → plot → generate report
 ```
 
-### 2. result_analyzer.py — Phân tích kết quả
+## File: result_analyzer.py
 
 ```
 result_analyzer.py
-├── analyze(results):
-│   win_rate = wins / num_games * 100
-│   avg_steps_win = mean(steps_win) nếu có thắng
-│   avg_steps_lose = mean(steps_lose) nếu có thua
-│   avg_time = mean(times)
-│   return {
-│       "win_rate": ...,
-│       "avg_steps_win": ...,
-│       "avg_steps_lose": ...,
-│       "avg_time_per_step": ...,  # ms
-│   }
+├── analyze_benchmark_results(grid_size):
+│   load results/logs/benchmark_{size}.npy
+│   tính: win_rate, avg_steps_win, avg_steps_lose, avg_time_per_step
+│   → return (man_results, ann_results)
 │
-├── print_comparison(man_results, ann_results):
-│   in bảng so sánh ra console
-│   vẽ bar chart (gọi comparison_plot.py)
+├── print_summary(grid_size):
+│   in bảng phân tích ra console
+│
+└── run(grid_size): gọi print_summary
 ```
 
-### 3. export_results.py — Xuất CSV
+## File: export_results.py
 
 ```
 export_results.py
-├── export_to_csv(man_results, ann_results, grid_size):
-│   import csv
-│   with open(f"results/reports/benchmark_{grid_size}.csv", "w") as f:
-│       writer = csv.writer(f)
-│       writer.writerow(["Metric", "Manhattan", "ANN", "Difference"])
-│       writer.writerow(["Win Rate", ...])
-│       writer.writerow(["Avg Steps (Win)", ...])
-│       writer.writerow(["Avg Steps (Lose)", ...])
-│       writer.writerow(["Avg Time/Step (ms)", ...])
+├── export_results(grid_size):
+│   load benchmark_{size}.npy
+│   tính các chỉ số
+│   ghi CSV → results/reports/benchmark_{size}.csv
 │
-├── export_to_md(man_results, ann_results, grid_size):
-│   ghi ra results/reports/report_{size}.md
+└── run(grid_size): gọi export_results
 ```
 
 ## Đầu vào/Đầu ra
@@ -107,20 +81,10 @@ export_results.py
 - **Output**:
   - `results/logs/benchmark_{size}.npy` — raw data
   - `results/reports/benchmark_{size}.csv` — bảng CSV
-  - `results/reports/report_{size}.md` — báo cáo markdown
   - Console: bảng so sánh
 
-## Kịch bản mong đợi
+## Lưu ý
 
-```
-=== BENCHMARK: Grid 20x20, 50 games ===
-Metric              | Manhattan | ANN      | Diff
---------------------|-----------|----------|--------
-Win Rate            | 78.0%     | 92.0%    | +14.0%
-Avg Steps (Win)     | 45.3      | 38.1     | -7.2
-Avg Steps (Lose)    | 120.6     | 95.4     | -25.2
-Avg Time/Step (ms)  | 0.8       | 2.3      | +1.5
-```
-
-ANN chậm hơn mỗi bước (~2-5ms vs <1ms) nhưng thắng nhiều hơn và đi ít bước hơn.
-Đây là trade-off giữa accuracy và speed — nội dung chính để báo cáo.
+- Win condition: `food_eaten > 0` (rắn ăn được ít nhất 1 mồi trước khi chết)
+- Manhattan không biết obstacles → heuristic luôn là đường chim bay
+- ANN heuristic biết thân rắn trong window 7x7 (nhưng không biết obstacles cố định)

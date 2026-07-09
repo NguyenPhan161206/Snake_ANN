@@ -9,6 +9,14 @@ Thay vì dùng công thức khoảng cách do con người định nghĩa sẵn,
 ANN sẽ học từ dữ liệu để dự đoán khoảng cách thực tế từ đầu rắn đến thức ăn,
 có tính đến chướng ngại vật (thân rắn, tường biên).
 
+### Tính năng chính
+
+- **Chướng ngại vật ngẫu nhiên**: Mỗi lần Reset, obstacles mới được sinh (15% grid)
+- **Rắn xuất phát cố định**: Luôn bắt đầu ở góc trên trái (1, 1)
+- **Ăn nhiều lần**: Rắn ăn được nhiều mồi, dài dần ra. Game chỉ kết thúc khi rắn chết.
+- **Mồi hợp lệ**: Thức ăn chỉ xuất hiện ở ô có đường đi từ đầu rắn (BFS reachable)
+- **So sánh thời gian thực**: Chuyển đổi giữa A*+Manhattan và A*+ANN bằng phím 1/2
+
 ## Kiến trúc hệ thống
 
 ```
@@ -16,15 +24,15 @@ main.py  →  Điều phối 5 giai đoạn
 │
 ├── data_generation/    Sinh dữ liệu BFS
 ├── training/           Huấn luyện ANN
-├── integration/        Tích hợp A* + ANN
-├── visualization/      Trực quan hóa Pygame
+├── integration/        Tích hợp A* + ANN + logic game
+├── visualization/      Trực quan hóa Pygame + biểu đồ
 └── evaluation/         Benchmark và thống kê
 ```
 
 ## Yêu cầu
 
 - Python 3.9+
-- pygame, tensorflow, numpy, matplotlib
+- pygame, tensorflow, numpy, matplotlib, tqdm
 
 ## Cách chạy (bắt buộc làm theo đúng thứ tự)
 
@@ -48,7 +56,6 @@ pip install -r requirements.txt
 ### 2. Chạy chương trình
 
 ```bash
-# Đã ở trong thư mục dự án, đã kích hoạt venv
 cd ~/Music/AI_project/snake_ann_project
 source venv/bin/activate
 
@@ -68,7 +75,7 @@ Menu hiện ra, chọn:
 |------|-----------|
 | **1** | Chuyển sang A* + Manhattan |
 | **2** | Chuyển sang A* + ANN |
-| **R** | Reset game (rắn + thức ăn mới) |
+| **R** | Reset game (obstacles mới + rắn về start) |
 | **Space** | Tạm dừng / Tiếp tục |
 | **Q** | Thoát |
 
@@ -84,6 +91,7 @@ python -c "from evaluation.benchmark import run; run(10, 20)"
 
 ## Kết quả mong đợi
 
-- ANN học được heuristic tốt hơn Manhattan trong môi trường có chướng ngại vật
+- ANN học được heuristic có tính đến chướng ngại vật trong cửa sổ quan sát 7x7
 - So sánh win rate, số bước trung bình, thời gian chạy giữa A*+Manhattan và A*+ANN
 - Đồ thị loss vs epoch kiểm tra overfitting
+- Rắn tự động né obstacles + thân để đến thức ăn
